@@ -18,5 +18,10 @@ Este es un **demo funcional** del proyecto de arquitectura de sistemas informát
 - **Neon** permite conexión directa y SSL sin restricciones
 - **Streamlit** es gratuito y se despliega fácilmente en la nube
 - La estructura SQL (tablas y trigger) se reutilizó sin cambios
+- clave feriante:feriante2026
+- clave ayudantes:
+- "Pedro":pedro2026
+  "Maria":maria2026
+  "Jose":jose2026
 #para probar la conexion pegar el enlace en la barra de direcciones
 #del navegador:https://h7e8ujqlyl2rq2muptrwrm.streamlit.app/
