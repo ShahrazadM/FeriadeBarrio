@@ -73,12 +73,12 @@ st.markdown("""
         font-size: 1.2rem;
     }
     
-    .pago-option {
-        background-color: white;
+    .merma-card {
+        background-color: #FFF3E0;
         border-radius: 10px;
-        padding: 1rem;
+        padding: 0.8rem;
         margin: 0.5rem 0;
-        border: 1px solid #ddd;
+        border-left: 4px solid #FF9800;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -94,7 +94,7 @@ def verify_password(password, hashed):
     return hash_password(password) == hashed
 
 # ============================================
-# GESTIÓN DE AYUDANTES (usando session_state)
+# GESTIÓN DE AYUDANTES
 # ============================================
 
 if 'ayudantes' not in st.session_state:
@@ -251,22 +251,52 @@ st.markdown("---")
 # FUNCIONES DE BASE DE DATOS
 # ============================================
 
-@st.cache_data(ttl=10)
+@st.cache_data(ttl=5)
 def get_productos():
-    from db_config import get_connection
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("SELECT id, nombre, precio_por_kilo, stock_kg FROM productos ORDER BY nombre")
+    cur.execute("SELECT id, feriante_email, nombre, precio_por_kilo, stock_kg FROM productos ORDER BY nombre")
     productos_raw = cur.fetchall()
     cur.close()
     conn.close()
     productos = []
     for p in productos_raw:
-        productos.append((p[0], p[1], float(p[2]), float(p[3])))
+        productos.append((p[0], p[1], p[2], float(p[3]), float(p[4])))
     return productos
 
+def agregar_producto(feriante_email, nombre, precio, stock):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO productos (feriante_email, nombre, precio_por_kilo, stock_kg)
+        VALUES (%s, %s, %s, %s)
+    """, (feriante_email, nombre, precio, stock))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def actualizar_producto(producto_id, precio, stock):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE productos 
+        SET precio_por_kilo = %s, stock_kg = %s
+        WHERE id = %s
+    """, (precio, stock, producto_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def eliminar_producto(producto_id):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM venta_detalles WHERE producto_id = %s", (producto_id,))
+    cur.execute("DELETE FROM productos WHERE id = %s", (producto_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
 def registrar_venta_completa(feriante_email, items_carrito, tipo_pago, total):
-    from db_config import get_connection
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -286,7 +316,6 @@ def registrar_venta_completa(feriante_email, items_carrito, tipo_pago, total):
     return venta_id
 
 def registrar_merma(producto_id, cantidad_kg, email, motivo):
-    from db_config import get_connection
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -306,7 +335,6 @@ def registrar_merma(producto_id, cantidad_kg, email, motivo):
 
 @st.cache_data(ttl=30)
 def get_ventas_semanales():
-    from db_config import get_connection
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -333,9 +361,39 @@ def get_ventas_semanales():
         return df
     return pd.DataFrame()
 
+# ============================================
+# FUNCIONES PARA MERMAS
+# ============================================
+
 @st.cache_data(ttl=30)
-def get_mermas_semanales():
-    from db_config import get_connection
+def get_resumen_mermas():
+    """Obtiene el resumen de mermas por producto"""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT 
+            p.nombre as producto,
+            SUM(vd.cantidad_kg) as total_kg_perdidos,
+            COUNT(vd.id) as cantidad_mermas
+        FROM ventas v
+        JOIN venta_detalles vd ON v.id = vd.venta_id
+        JOIN productos p ON vd.producto_id = p.id
+        WHERE v.tipo_pago = 'merma'
+        GROUP BY p.nombre
+        ORDER BY total_kg_perdidos DESC
+    """)
+    resumen = cur.fetchall()
+    cur.close()
+    conn.close()
+    if resumen:
+        df = pd.DataFrame(resumen, columns=['producto', 'total_kg_perdidos', 'cantidad_mermas'])
+        df['total_kg_perdidos'] = df['total_kg_perdidos'].astype(float)
+        return df
+    return pd.DataFrame()
+
+@st.cache_data(ttl=30)
+def get_mermas_detalle():
+    """Obtiene el detalle de todas las mermas"""
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -343,12 +401,11 @@ def get_mermas_semanales():
             DATE(v.fecha) as fecha,
             p.nombre as producto,
             vd.cantidad_kg,
-            v.observacion
+            v.observacion as motivo
         FROM ventas v
         JOIN venta_detalles vd ON v.id = vd.venta_id
         JOIN productos p ON vd.producto_id = p.id
-        WHERE v.fecha >= NOW() - INTERVAL '7 days'
-        AND v.tipo_pago = 'merma'
+        WHERE v.tipo_pago = 'merma'
         ORDER BY v.fecha DESC
     """)
     mermas = cur.fetchall()
@@ -358,6 +415,20 @@ def get_mermas_semanales():
         df = pd.DataFrame(mermas, columns=['fecha', 'producto', 'cantidad_kg', 'motivo'])
         df['cantidad_kg'] = df['cantidad_kg'].astype(float)
         return df
+    return pd.DataFrame()
+
+def get_stock_actual_mermas():
+    """Obtiene el stock actual de productos (para comparar con mermas)"""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT nombre, stock_kg FROM productos ORDER BY nombre
+    """)
+    stock = cur.fetchall()
+    cur.close()
+    conn.close()
+    if stock:
+        return pd.DataFrame(stock, columns=['producto', 'stock_actual_kg'])
     return pd.DataFrame()
 
 # ============================================
@@ -404,9 +475,6 @@ def calcular_total_carrito():
 # ============================================
 
 def mostrar_seccion_pago(total, key_prefix=""):
-    """Muestra la sección de pago con selección de tipo de pago"""
-    
-    # Selector de tipo de pago
     tipo_pago = st.radio(
         "💳 **Selecciona método de pago:**",
         ["💵 Efectivo", "💳 Tarjeta (POS Mercado Pago)"],
@@ -417,7 +485,6 @@ def mostrar_seccion_pago(total, key_prefix=""):
     st.markdown("---")
     
     if tipo_pago == "💵 Efectivo":
-        # Flujo para EFECTIVO
         st.subheader("💵 Pago en Efectivo")
         pago_cliente = st.number_input(
             "💰 Cliente paga con:", 
@@ -439,7 +506,6 @@ def mostrar_seccion_pago(total, key_prefix=""):
         return None, False
     
     else:
-        # Flujo para TARJETA (POS externo)
         st.subheader("💳 Pago con Tarjeta")
         st.info("📱 El cliente pagará con el POS de Mercado Pago")
         st.caption("Una vez que el POS confirme el pago, presiona el botón para registrar la venta")
@@ -465,32 +531,98 @@ st.markdown(f"""
 # ============================================
 
 if st.session_state.rol == "feriante":
-    tab1, tab2, tab3, tab4 = st.tabs(["📦 Inventario", "🛒 Venta", "📊 Reportes", "⚠️ Mermas"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📦 Inventario", "➕ Agregar Producto", "🛒 Venta", "📊 Reportes", "⚠️ Mermas"])
     
+    # ----- TAB 1: VER INVENTARIO Y EDITAR -----
     with tab1:
         st.header("📦 Inventario Actual")
         productos = get_productos()
+        
         if productos:
-            df = pd.DataFrame(productos, columns=['id', 'nombre', 'precio_por_kilo', 'stock_kg'])
-            df['precio_por_kilo'] = df['precio_por_kilo'].apply(lambda x: f"${x:,.0f}/kg")
-            df['stock_kg'] = df['stock_kg'].apply(lambda x: f"{x:.1f} kg")
-            st.dataframe(df[['nombre', 'precio_por_kilo', 'stock_kg']], use_container_width=True)
+            st.subheader("📋 Lista de Productos")
+            for p in productos:
+                with st.container():
+                    col1, col2, col3, col4, col5 = st.columns([2, 1.5, 1.5, 0.8, 0.8])
+                    with col1:
+                        st.write(f"**{p[2]}**")
+                    with col2:
+                        nuevo_precio = st.number_input(
+                            "Precio/kg", 
+                            value=float(p[3]), 
+                            step=100.0, 
+                            format="%.0f",
+                            key=f"precio_{p[0]}",
+                            label_visibility="collapsed"
+                        )
+                    with col3:
+                        nuevo_stock = st.number_input(
+                            "Stock kg", 
+                            value=float(p[4]), 
+                            step=5.0, 
+                            format="%.1f",
+                            key=f"stock_{p[0]}",
+                            label_visibility="collapsed"
+                        )
+                    with col4:
+                        if st.button(f"💾", key=f"save_{p[0]}", help="Guardar cambios"):
+                            if nuevo_precio != p[3] or nuevo_stock != p[4]:
+                                actualizar_producto(p[0], nuevo_precio, nuevo_stock)
+                                st.success(f"✅ {p[2]} actualizado")
+                                st.cache_data.clear()
+                                time.sleep(0.5)
+                                st.rerun()
+                    with col5:
+                        if st.button(f"🗑️", key=f"del_{p[0]}", help="Eliminar producto"):
+                            eliminar_producto(p[0])
+                            st.success(f"❌ {p[2]} eliminado")
+                            st.cache_data.clear()
+                            time.sleep(0.5)
+                            st.rerun()
+                    st.markdown("---")
             
-            stock_bajo = [p for p in productos if p[3] < 10]
+            stock_bajo = [p for p in productos if p[4] < 10]
             if stock_bajo:
                 st.warning("⚠️ **Productos con stock bajo (< 10 kg):**")
                 for p in stock_bajo:
-                    st.write(f"- {p[1]}: {p[3]:.1f} kg")
+                    st.write(f"- {p[2]}: {p[4]:.1f} kg")
+        else:
+            st.info("📭 No hay productos cargados. Ve a la pestaña 'Agregar Producto' para comenzar.")
     
+    # ----- TAB 2: AGREGAR NUEVO PRODUCTO -----
     with tab2:
+        st.header("➕ Agregar Nuevo Producto")
+        
+        with st.form("nuevo_producto_form"):
+            col1, col2 = st.columns(2)
+            with col1:
+                nombre_producto = st.text_input("🍎 Nombre del producto", placeholder="Ej: 🍌 Plátanos, 🥑 Paltas, 🍊 Naranjas")
+            with col2:
+                precio_producto = st.number_input("💰 Precio por kilo ($)", min_value=100, step=100, format="%.0f", value=1000)
+            
+            stock_inicial = st.number_input("📦 Stock inicial (kg)", min_value=0.0, step=5.0, format="%.1f", value=10.0)
+            email_feriante = st.text_input("📧 Email del feriante", value="prueba@ejemplo.com")
+            
+            submitted = st.form_submit_button("➕ Agregar Producto", use_container_width=True)
+            
+            if submitted:
+                if nombre_producto:
+                    agregar_producto(email_feriante, nombre_producto, precio_producto, stock_inicial)
+                    st.success(f"✅ Producto '{nombre_producto}' agregado correctamente")
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ El nombre del producto es obligatorio")
+    
+    # ----- TAB 3: VENTA (carrito) -----
+    with tab3:
         st.header("🛒 Carrito de Compras")
         productos = get_productos()
         
         if productos:
-            opciones = {p[1]: {'id': p[0], 'precio': p[2], 'stock': p[3]} for p in productos}
+            opciones = {p[2]: {'id': p[0], 'precio': p[3], 'stock': p[4]} for p in productos}
             nombres = list(opciones.keys())
             
-            # Agregar productos al carrito
             with st.container():
                 col1, col2 = st.columns([2, 1])
                 with col1:
@@ -508,7 +640,6 @@ if st.session_state.rol == "feriante":
             
             st.markdown("---")
             
-            # Mostrar carrito
             if st.session_state.carrito:
                 st.subheader("🛍️ Carrito actual")
                 for idx, item in enumerate(st.session_state.carrito):
@@ -526,14 +657,12 @@ if st.session_state.rol == "feriante":
                 
                 total = calcular_total_carrito()
                 
-                # Mostrar TOTAL A COBRAR
                 st.markdown(f"""
                 <div class="total-a-cobrar">
                     <h2>💰 TOTAL A COBRAR: ${total:,.0f}</h2>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Sección de pago (con selector de método)
                 tipo_pago, confirmado = mostrar_seccion_pago(total, "feriante")
                 
                 if confirmado:
@@ -550,9 +679,12 @@ if st.session_state.rol == "feriante":
                     st.rerun()
             else:
                 st.info("🛒 El carrito está vacío. Agrega productos para comenzar.")
+        else:
+            st.info("📭 No hay productos cargados")
     
-    with tab3:
-        st.header("📊 Reporte Semanal")
+    # ----- TAB 4: REPORTES -----
+    with tab4:
+        st.header("📊 Reporte Semanal de Ventas")
         df = get_ventas_semanales()
         if not df.empty:
             ventas_dia = df.groupby('fecha')['subtotal'].sum().reset_index()
@@ -560,36 +692,124 @@ if st.session_state.rol == "feriante":
             st.plotly_chart(fig, use_container_width=True)
             
             top = df.groupby('producto')['cantidad_kg'].sum().reset_index().sort_values('cantidad_kg', ascending=False).head(5)
-            fig2 = px.bar(top, x='producto', y='cantidad_kg', title="Top 5 Productos")
+            fig2 = px.bar(top, x='producto', y='cantidad_kg', title="Top 5 Productos más Vendidos")
             st.plotly_chart(fig2, use_container_width=True)
             
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Total Vendido", f"${df['subtotal'].sum():,.0f}")
-            c2.metric("Total Kilos", f"{df['cantidad_kg'].sum():.1f} kg")
-            c3.metric("N° Ventas", df.shape[0])
+            col1, col2, col3 = st.columns(3)
+            col1.metric("💰 Total Vendido", f"${df['subtotal'].sum():,.0f}")
+            col2.metric("⚖️ Total Kilos Vendidos", f"{df['cantidad_kg'].sum():.1f} kg")
+            col3.metric("📝 N° Ventas", df.shape[0])
             
+            st.subheader("📋 Detalle de Ventas")
             st.dataframe(df.sort_values('fecha', ascending=False), use_container_width=True)
+        else:
+            st.info("📭 No hay ventas en la última semana")
     
-    with tab4:
-        st.header("⚠️ Mermas")
+    # ----- TAB 5: MERMAS (con resumen y detalle) -----
+    with tab5:
+        st.header("⚠️ Registrar Nueva Merma")
+        
         productos = get_productos()
         if productos:
-            opciones = {p[1]: {'id': p[0], 'stock': p[3]} for p in productos}
+            opciones = {p[2]: {'id': p[0], 'stock': p[4]} for p in productos}
+            
             col1, col2 = st.columns(2)
             with col1:
-                prod = st.selectbox("Producto", list(opciones.keys()))
+                producto_merma = st.selectbox("🍎 Producto", list(opciones.keys()), key="prod_merma")
             with col2:
-                cant = st.number_input("kg perdidos", min_value=0.1, step=0.1)
-            motivo = st.selectbox("Motivo", ["Dañado", "Vencido", "Mal estado", "Caída", "Otro"])
-            if st.button("Registrar Merma"):
-                if cant <= opciones[prod]['stock']:
-                    registrar_merma(opciones[prod]['id'], cant, "prueba@ejemplo.com", motivo)
-                    st.success(f"Merma registrada: {cant} kg de {prod}")
+                cantidad_merma = st.number_input("⚠️ Cantidad perdida (kg)", min_value=0.1, step=0.5, format="%.1f", key="cant_merma")
+            
+            motivo = st.selectbox("📝 Motivo", ["Producto dañado", "Producto vencido", "Producto en mal estado", "Caída/rotura", "Otro"])
+            
+            if st.button("⚠️ Registrar Merma", use_container_width=True):
+                if cantidad_merma <= opciones[producto_merma]['stock']:
+                    registrar_merma(opciones[producto_merma]['id'], cantidad_merma, "prueba@ejemplo.com", motivo)
+                    st.success(f"✅ Merma registrada: {cantidad_merma} kg de {producto_merma}")
                     st.cache_data.clear()
                     time.sleep(1)
                     st.rerun()
                 else:
-                    st.error(f"Stock insuficiente")
+                    st.error(f"❌ Stock insuficiente. Solo hay {opciones[producto_merma]['stock']:.1f} kg")
+        
+        st.markdown("---")
+        
+        # ========== RESUMEN DE MERMAS ==========
+        st.header("📊 Resumen de Mermas por Producto")
+        
+        df_resumen = get_resumen_mermas()
+        if not df_resumen.empty:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader("📋 Tabla Resumen")
+                st.dataframe(df_resumen, use_container_width=True)
+            
+            with col2:
+                # Gráfico de mermas por producto
+                fig_mermas = px.bar(
+                    df_resumen, 
+                    x='producto', 
+                    y='total_kg_perdidos',
+                    title="Kilos Perdidos por Producto",
+                    labels={'producto': 'Producto', 'total_kg_perdidos': 'Kilos perdidos'},
+                    color='total_kg_perdidos',
+                    text_auto=True
+                )
+                st.plotly_chart(fig_mermas, use_container_width=True)
+            
+            # Métricas totales
+            total_kg_perdidos = df_resumen['total_kg_perdidos'].sum()
+            total_mermas = df_resumen['cantidad_mermas'].sum()
+            
+            col1, col2, col3 = st.columns(3)
+            col1.metric("📦 Total Kilos Perdidos", f"{total_kg_perdidos:.1f} kg")
+            col2.metric("📝 Total de Mermas", total_mermas)
+            col3.metric("🥇 Producto más afectado", df_resumen.iloc[0]['producto'] if not df_resumen.empty else "Ninguno")
+        else:
+            st.info("📭 No hay mermas registradas")
+        
+        st.markdown("---")
+        
+        # ========== DETALLE DE MERMAS ==========
+        st.header("📋 Historial Detallado de Mermas")
+        
+        df_detalle = get_mermas_detalle()
+        if not df_detalle.empty:
+            # Selector de filtro por producto
+            productos_merma = ["Todos"] + sorted(df_detalle['producto'].unique().tolist())
+            filtro_producto = st.selectbox("🔍 Filtrar por producto", productos_merma)
+            
+            if filtro_producto != "Todos":
+                df_detalle = df_detalle[df_detalle['producto'] == filtro_producto]
+            
+            st.dataframe(df_detalle, use_container_width=True)
+            
+            # Exportar a CSV
+            csv = df_detalle.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Descargar historial de mermas (CSV)",
+                data=csv,
+                file_name="historial_mermas.csv",
+                mime="text/csv",
+            )
+        else:
+            st.info("📭 No hay mermas registradas en el historial")
+        
+        # ========== COMPARATIVA STOCK ACTUAL VS MERMAS ==========
+        st.markdown("---")
+        st.header("📊 Comparativa: Stock Actual vs Mermas")
+        
+        df_stock = get_stock_actual_mermas()
+        if not df_resumen.empty and not df_stock.empty:
+            comparativa = pd.merge(df_stock, df_resumen, on='producto', how='left')
+            comparativa = comparativa.fillna(0)
+            comparativa.rename(columns={'stock_actual_kg': 'Stock Actual (kg)', 'total_kg_perdidos': 'Kilos Perdidos por Mermas'}, inplace=True)
+            comparativa['Stock Actual (kg)'] = comparativa['Stock Actual (kg)'].round(1)
+            comparativa['Kilos Perdidos por Mermas'] = comparativa['Kilos Perdidos por Mermas'].round(1)
+            comparativa = comparativa.sort_values('Kilos Perdidos por Mermas', ascending=False)
+            
+            st.dataframe(comparativa, use_container_width=True)
+        else:
+            st.info("📭 No hay datos suficientes para la comparativa")
 
 # ============================================
 # INTERFAZ - AYUDANTE
@@ -600,10 +820,9 @@ elif st.session_state.rol == "ayudante":
     productos = get_productos()
     
     if productos:
-        opciones = {p[1]: {'id': p[0], 'precio': p[2], 'stock': p[3]} for p in productos}
+        opciones = {p[2]: {'id': p[0], 'precio': p[3], 'stock': p[4]} for p in productos}
         nombres = list(opciones.keys())
         
-        # Agregar productos al carrito
         col1, col2 = st.columns([2, 1])
         with col1:
             producto = st.selectbox("🍎 Producto", nombres, key="prod_ayudante")
@@ -620,7 +839,6 @@ elif st.session_state.rol == "ayudante":
         
         st.markdown("---")
         
-        # Mostrar carrito
         if st.session_state.carrito:
             st.subheader("🛍️ Carrito actual")
             for idx, item in enumerate(st.session_state.carrito):
@@ -643,7 +861,6 @@ elif st.session_state.rol == "ayudante":
             </div>
             """, unsafe_allow_html=True)
             
-            # Sección de pago
             tipo_pago, confirmado = mostrar_seccion_pago(total, "ayudante")
             
             if confirmado:
@@ -660,9 +877,11 @@ elif st.session_state.rol == "ayudante":
                 st.rerun()
         else:
             st.info("🛒 El carrito está vacío")
+    else:
+        st.info("📭 No hay productos cargados")
 
 # ============================================
-# INTERFAZ - INVITADO (sin autenticar)
+# INTERFAZ - INVITADO
 # ============================================
 
 else:
@@ -671,7 +890,7 @@ else:
     
     productos = get_productos()
     if productos:
-        opciones = {p[1]: {'precio': p[2], 'stock': p[3]} for p in productos}
+        opciones = {p[2]: {'precio': p[3], 'stock': p[4]} for p in productos}
         col1, col2 = st.columns(2)
         with col1:
             producto = st.selectbox("Producto", list(opciones.keys()))
@@ -685,7 +904,7 @@ else:
                 st.info("Demo - Registro simulado")
 
 st.markdown("---")
-st.caption(f"🛒 {st.session_state.negocio_nombre} - PRODUCTOS FRESCOS COMPRE CONFIANZA | Powered by Streamlit")
+st.caption(f"🛒 {st.session_state.negocio_nombre} - Frescura como nunca | Powered by Streamlit")
 
 #para ejecutar colocamos en la terminal
 #streamlit run app.py
