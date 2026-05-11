@@ -49,16 +49,6 @@ st.markdown("""
         border: 1px solid #a5d6a7;
     }
     
-    .vuelto-success {
-        background-color: #4CAF50;
-        color: white;
-        padding: 0.8rem;
-        border-radius: 8px;
-        text-align: center;
-        font-weight: bold;
-        font-size: 1.2rem;
-    }
-    
     .total-a-cobrar {
         background: linear-gradient(135deg, #2E7D32, #4CAF50);
         color: white;
@@ -73,12 +63,22 @@ st.markdown("""
         font-size: 2rem;
     }
     
-    .product-card {
+    .vuelto-success {
+        background-color: #4CAF50;
+        color: white;
+        padding: 0.8rem;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    
+    .pago-option {
         background-color: white;
         border-radius: 10px;
-        padding: 0.8rem;
+        padding: 1rem;
         margin: 0.5rem 0;
-        border-left: 4px solid #4CAF50;
+        border: 1px solid #ddd;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -94,7 +94,7 @@ def verify_password(password, hashed):
     return hash_password(password) == hashed
 
 # ============================================
-# GESTIÓN DE AYUDANTES
+# GESTIÓN DE AYUDANTES (usando session_state)
 # ============================================
 
 if 'ayudantes' not in st.session_state:
@@ -253,6 +253,7 @@ st.markdown("---")
 
 @st.cache_data(ttl=10)
 def get_productos():
+    from db_config import get_connection
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("SELECT id, nombre, precio_por_kilo, stock_kg FROM productos ORDER BY nombre")
@@ -265,6 +266,7 @@ def get_productos():
     return productos
 
 def registrar_venta_completa(feriante_email, items_carrito, tipo_pago, total):
+    from db_config import get_connection
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -284,6 +286,7 @@ def registrar_venta_completa(feriante_email, items_carrito, tipo_pago, total):
     return venta_id
 
 def registrar_merma(producto_id, cantidad_kg, email, motivo):
+    from db_config import get_connection
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -303,6 +306,7 @@ def registrar_merma(producto_id, cantidad_kg, email, motivo):
 
 @st.cache_data(ttl=30)
 def get_ventas_semanales():
+    from db_config import get_connection
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -331,6 +335,7 @@ def get_ventas_semanales():
 
 @st.cache_data(ttl=30)
 def get_mermas_semanales():
+    from db_config import get_connection
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("""
@@ -395,6 +400,56 @@ def calcular_total_carrito():
     return sum(item['subtotal'] for item in st.session_state.carrito)
 
 # ============================================
+# FUNCIONES DE INTERFAZ DE PAGO
+# ============================================
+
+def mostrar_seccion_pago(total, key_prefix=""):
+    """Muestra la sección de pago con selección de tipo de pago"""
+    
+    # Selector de tipo de pago
+    tipo_pago = st.radio(
+        "💳 **Selecciona método de pago:**",
+        ["💵 Efectivo", "💳 Tarjeta (POS Mercado Pago)"],
+        key=f"{key_prefix}_tipo_pago",
+        horizontal=True
+    )
+    
+    st.markdown("---")
+    
+    if tipo_pago == "💵 Efectivo":
+        # Flujo para EFECTIVO
+        st.subheader("💵 Pago en Efectivo")
+        pago_cliente = st.number_input(
+            "💰 Cliente paga con:", 
+            min_value=0.0, 
+            step=500.0, 
+            format="%.0f",
+            key=f"{key_prefix}_efectivo"
+        )
+        
+        if pago_cliente >= total and total > 0:
+            vuelto = pago_cliente - total
+            st.markdown(f"<div class='vuelto-success'>💵 VUELTO: ${vuelto:,.0f}</div>", unsafe_allow_html=True)
+            
+            if st.button("✅ CONFIRMAR PAGO EN EFECTIVO", key=f"{key_prefix}_confirmar_efectivo", use_container_width=True):
+                return "efectivo", True
+        elif pago_cliente > 0 and pago_cliente < total:
+            st.error(f"⚠️ Faltan ${total - pago_cliente:,.0f}")
+        
+        return None, False
+    
+    else:
+        # Flujo para TARJETA (POS externo)
+        st.subheader("💳 Pago con Tarjeta")
+        st.info("📱 El cliente pagará con el POS de Mercado Pago")
+        st.caption("Una vez que el POS confirme el pago, presiona el botón para registrar la venta")
+        
+        if st.button("✅ CONFIRMAR PAGO CON TARJETA", key=f"{key_prefix}_confirmar_tarjeta", use_container_width=True):
+            return "tarjeta", True
+        
+        return None, False
+
+# ============================================
 # TÍTULO
 # ============================================
 
@@ -406,7 +461,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ============================================
-# INTERFAZ
+# INTERFAZ PRINCIPAL - FERIANTE
 # ============================================
 
 if st.session_state.rol == "feriante":
@@ -420,6 +475,7 @@ if st.session_state.rol == "feriante":
             df['precio_por_kilo'] = df['precio_por_kilo'].apply(lambda x: f"${x:,.0f}/kg")
             df['stock_kg'] = df['stock_kg'].apply(lambda x: f"{x:.1f} kg")
             st.dataframe(df[['nombre', 'precio_por_kilo', 'stock_kg']], use_container_width=True)
+            
             stock_bajo = [p for p in productos if p[3] < 10]
             if stock_bajo:
                 st.warning("⚠️ **Productos con stock bajo (< 10 kg):**")
@@ -429,11 +485,12 @@ if st.session_state.rol == "feriante":
     with tab2:
         st.header("🛒 Carrito de Compras")
         productos = get_productos()
+        
         if productos:
             opciones = {p[1]: {'id': p[0], 'precio': p[2], 'stock': p[3]} for p in productos}
             nombres = list(opciones.keys())
             
-            # Selección de productos
+            # Agregar productos al carrito
             with st.container():
                 col1, col2 = st.columns([2, 1])
                 with col1:
@@ -451,9 +508,9 @@ if st.session_state.rol == "feriante":
             
             st.markdown("---")
             
-            # Carrito
+            # Mostrar carrito
             if st.session_state.carrito:
-                st.subheader("🛍️ Productos en el carrito")
+                st.subheader("🛍️ Carrito actual")
                 for idx, item in enumerate(st.session_state.carrito):
                     col1, col2, col3, col4 = st.columns([2, 1, 1, 0.5])
                     with col1:
@@ -463,52 +520,30 @@ if st.session_state.rol == "feriante":
                     with col3:
                         st.write(f"${item['subtotal']:,.0f}")
                     with col4:
-                        if st.button("🗑️", key=f"del_{idx}"):
+                        if st.button("🗑️", key=f"del_fer_{idx}"):
                             eliminar_del_carrito(idx)
                             st.rerun()
                 
-                st.markdown("---")
                 total = calcular_total_carrito()
                 
-                # Total a cobrar (visible siempre)
+                # Mostrar TOTAL A COBRAR
                 st.markdown(f"""
                 <div class="total-a-cobrar">
                     <h2>💰 TOTAL A COBRAR: ${total:,.0f}</h2>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Tipo de pago y vuelto
-                col_efectivo, col_tarjeta = st.columns(2)
+                # Sección de pago (con selector de método)
+                tipo_pago, confirmado = mostrar_seccion_pago(total, "feriante")
                 
-                with col_efectivo:
-                    st.subheader("💵 Efectivo")
-                    pago_cliente = st.number_input("Cliente paga con:", min_value=0.0, step=1000.0, format="%.0f", key="pago_efectivo")
-                    
-                    if pago_cliente >= total and total > 0:
-                        vuelto = pago_cliente - total
-                        st.markdown(f"<div class='vuelto-success'>💵 VUELTO: ${vuelto:,.0f}</div>", unsafe_allow_html=True)
-                        confirmar = st.button("✅ CONFIRMAR PAGO EN EFECTIVO", key="confirmar_efectivo", use_container_width=True)
-                        if confirmar:
-                            registrar_venta_completa("prueba@ejemplo.com", st.session_state.carrito, "efectivo", total)
-                            st.success(f"✅ ¡Venta confirmada! Total: ${total:,.0f}")
-                            st.session_state.carrito = []
-                            st.balloons()
-                            st.cache_data.clear()
-                            time.sleep(1)
-                            st.rerun()
-                    elif pago_cliente > 0 and pago_cliente < total:
-                        st.error(f"⚠️ Faltan ${total - pago_cliente:,.0f}")
-                
-                with col_tarjeta:
-                    st.subheader("💳 Tarjeta")
-                    if st.button("✅ CONFIRMAR PAGO CON TARJETA", key="confirmar_tarjeta", use_container_width=True):
-                        registrar_venta_completa("prueba@ejemplo.com", st.session_state.carrito, "tarjeta", total)
-                        st.success(f"✅ ¡Venta confirmada! Total: ${total:,.0f}")
-                        st.session_state.carrito = []
-                        st.balloons()
-                        st.cache_data.clear()
-                        time.sleep(1)
-                        st.rerun()
+                if confirmado:
+                    registrar_venta_completa("prueba@ejemplo.com", st.session_state.carrito, tipo_pago, total)
+                    st.success(f"✅ ¡Venta confirmada! Total: ${total:,.0f}")
+                    st.session_state.carrito = []
+                    st.balloons()
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
                 
                 if st.button("🗑️ Vaciar Carrito", key="vaciar_feriante"):
                     limpiar_carrito()
@@ -523,13 +558,16 @@ if st.session_state.rol == "feriante":
             ventas_dia = df.groupby('fecha')['subtotal'].sum().reset_index()
             fig = px.bar(ventas_dia, x='fecha', y='subtotal', title="Ventas por Día", text_auto=True)
             st.plotly_chart(fig, use_container_width=True)
+            
             top = df.groupby('producto')['cantidad_kg'].sum().reset_index().sort_values('cantidad_kg', ascending=False).head(5)
             fig2 = px.bar(top, x='producto', y='cantidad_kg', title="Top 5 Productos")
             st.plotly_chart(fig2, use_container_width=True)
+            
             c1, c2, c3 = st.columns(3)
             c1.metric("Total Vendido", f"${df['subtotal'].sum():,.0f}")
             c2.metric("Total Kilos", f"{df['cantidad_kg'].sum():.1f} kg")
             c3.metric("N° Ventas", df.shape[0])
+            
             st.dataframe(df.sort_values('fecha', ascending=False), use_container_width=True)
     
     with tab4:
@@ -550,78 +588,86 @@ if st.session_state.rol == "feriante":
                     st.cache_data.clear()
                     time.sleep(1)
                     st.rerun()
+                else:
+                    st.error(f"Stock insuficiente")
+
+# ============================================
+# INTERFAZ - AYUDANTE
+# ============================================
 
 elif st.session_state.rol == "ayudante":
-    # Ayudante autenticado - misma interfaz de ventas
     st.header("🛒 Carrito de Compras")
     productos = get_productos()
+    
     if productos:
         opciones = {p[1]: {'id': p[0], 'precio': p[2], 'stock': p[3]} for p in productos}
         nombres = list(opciones.keys())
         
+        # Agregar productos al carrito
         col1, col2 = st.columns([2, 1])
         with col1:
-            producto = st.selectbox("🍎 Producto", nombres)
+            producto = st.selectbox("🍎 Producto", nombres, key="prod_ayudante")
         with col2:
-            cantidad = st.number_input("⚖️ kg", min_value=0.1, step=0.1, format="%.1f")
+            cantidad = st.number_input("⚖️ kg", min_value=0.1, step=0.1, format="%.1f", key="cant_ayudante")
         
         if producto:
             precio = opciones[producto]['precio']
             stock = opciones[producto]['stock']
             st.info(f"💰 ${precio:,.0f}/kg | 📦 Stock: {stock:.1f} kg")
-            if st.button("➕ Agregar"):
+            if st.button("➕ Agregar", key="agregar_ayudante"):
                 agregar_al_carrito(opciones[producto]['id'], producto, cantidad, precio, stock)
                 st.rerun()
         
         st.markdown("---")
         
+        # Mostrar carrito
         if st.session_state.carrito:
             st.subheader("🛍️ Carrito actual")
             for idx, item in enumerate(st.session_state.carrito):
                 col1, col2, col3, col4 = st.columns([2, 1, 1, 0.5])
-                col1.write(f"**{item['nombre']}**")
-                col2.write(f"{item['cantidad']:.1f} kg")
-                col3.write(f"${item['subtotal']:,.0f}")
-                if col4.button("🗑️", key=f"del_{idx}"):
-                    eliminar_del_carrito(idx)
-                    st.rerun()
+                with col1:
+                    st.write(f"**{item['nombre']}**")
+                with col2:
+                    st.write(f"{item['cantidad']:.1f} kg")
+                with col3:
+                    st.write(f"${item['subtotal']:,.0f}")
+                with col4:
+                    if st.button("🗑️", key=f"del_ayu_{idx}"):
+                        eliminar_del_carrito(idx)
+                        st.rerun()
             
             total = calcular_total_carrito()
-            st.markdown(f"<div class='total-a-cobrar'><h2>💰 TOTAL A COBRAR: ${total:,.0f}</h2></div>", unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="total-a-cobrar">
+                <h2>💰 TOTAL A COBRAR: ${total:,.0f}</h2>
+            </div>
+            """, unsafe_allow_html=True)
             
-            col_efectivo, col_tarjeta = st.columns(2)
-            with col_efectivo:
-                pago = st.number_input("Cliente paga:", min_value=0.0, step=1000.0)
-                if pago >= total and total > 0:
-                    st.markdown(f"<div class='vuelto-success'>💵 VUELTO: ${pago - total:,.0f}</div>", unsafe_allow_html=True)
-                    if st.button("✅ CONFIRMAR PAGO EN EFECTIVO", use_container_width=True):
-                        registrar_venta_completa("prueba@ejemplo.com", st.session_state.carrito, "efectivo", total)
-                        st.success(f"✅ Venta confirmada! Total: ${total:,.0f}")
-                        st.session_state.carrito = []
-                        st.balloons()
-                        st.cache_data.clear()
-                        time.sleep(1)
-                        st.rerun()
-            with col_tarjeta:
-                if st.button("✅ CONFIRMAR PAGO CON TARJETA", use_container_width=True):
-                    registrar_venta_completa("prueba@ejemplo.com", st.session_state.carrito, "tarjeta", total)
-                    st.success(f"✅ Venta confirmada! Total: ${total:,.0f}")
-                    st.session_state.carrito = []
-                    st.balloons()
-                    st.cache_data.clear()
-                    time.sleep(1)
-                    st.rerun()
+            # Sección de pago
+            tipo_pago, confirmado = mostrar_seccion_pago(total, "ayudante")
             
-            if st.button("🗑️ Vaciar Carrito"):
+            if confirmado:
+                registrar_venta_completa("prueba@ejemplo.com", st.session_state.carrito, tipo_pago, total)
+                st.success(f"✅ ¡Venta confirmada! Total: ${total:,.0f}")
+                st.session_state.carrito = []
+                st.balloons()
+                st.cache_data.clear()
+                time.sleep(1)
+                st.rerun()
+            
+            if st.button("🗑️ Vaciar Carrito", key="vaciar_ayudante"):
                 limpiar_carrito()
                 st.rerun()
         else:
-            st.info("🛒 Carrito vacío")
+            st.info("🛒 El carrito está vacío")
+
+# ============================================
+# INTERFAZ - INVITADO (sin autenticar)
+# ============================================
 
 else:
-    # Invitado (no autenticado) - solo venta simple (sin carrito)
-    st.warning("👤 Modo invitado: sin autenticación")
-    st.info("Para usar el carrito múltiple, ingresa como Ayudante o Feriante")
+    st.warning("👤 **Modo Invitado** - Sin autenticación")
+    st.info("Para usar el carrito de compras múltiple, ingresa como Ayudante o Feriante")
     
     productos = get_productos()
     if productos:
@@ -633,15 +679,13 @@ else:
             cantidad = st.number_input("kg", min_value=0.1, step=0.1)
         
         if producto:
-            precio = opciones[producto]['precio']
-            subtotal = cantidad * precio
+            subtotal = cantidad * opciones[producto]['precio']
             st.metric("Total", f"${subtotal:,.0f}")
-            if st.button("Registrar venta"):
-                # Registro directo
-                st.info("Registrado (demo)")
+            if st.button("Registrar venta (Demo)"):
+                st.info("Demo - Registro simulado")
 
 st.markdown("---")
-st.caption(f"🛒 {st.session_state.negocio_nombre} - Sierra como nunca | Powered by Streamlit")
+st.caption(f"🛒 {st.session_state.negocio_nombre} - PRODUCTOS FRESCOS COMPRE CONFIANZA | Powered by Streamlit")
 
 #para ejecutar colocamos en la terminal
 #streamlit run app.py
