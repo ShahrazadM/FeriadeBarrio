@@ -533,6 +533,8 @@ st.markdown(f"""
 if st.session_state.rol == "feriante":
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📦 Inventario", "➕ Agregar Producto", "🛒 Venta", "📊 Reportes", "⚠️ Mermas"])
     
+        # ----- TAB 1: VER INVENTARIO Y EDITAR -----
+    # ----- TAB 2: AGREGAR NUEVO PRODUCTO -----
     # ----- TAB 1: VER INVENTARIO Y EDITAR -----
     with tab1:
         st.header("📦 Inventario Actual")
@@ -540,67 +542,102 @@ if st.session_state.rol == "feriante":
         
         if productos:
             st.subheader("📋 Lista de Productos")
+            
+            # Cabeceras de la tabla
+            col1, col2, col3, col4, col5 = st.columns([2, 1.2, 1.2, 0.6, 0.6])
+            with col1:
+                st.markdown("**🍎 Producto**")
+            with col2:
+                st.markdown("**💰 Precio por kg**")
+            with col3:
+                st.markdown("**📦 Stock (kg)**")
+            with col4:
+                st.markdown("**💾**")
+            with col5:
+                st.markdown("**🗑️**")
+            st.markdown("---")
+            
             for p in productos:
-                with st.container():
-                    col1, col2, col3, col4, col5 = st.columns([2, 1.5, 1.5, 0.8, 0.8])
-                    with col1:
-                        st.write(f"**{p[2]}**")
-                    with col2:
-                        nuevo_precio = st.number_input(
-                            "Precio/kg", 
-                            value=float(p[3]), 
-                            step=100.0, 
-                            format="%.0f",
-                            key=f"precio_{p[0]}",
-                            label_visibility="collapsed"
-                        )
-                    with col3:
-                        nuevo_stock = st.number_input(
-                            "Stock kg", 
-                            value=float(p[4]), 
-                            step=5.0, 
-                            format="%.1f",
-                            key=f"stock_{p[0]}",
-                            label_visibility="collapsed"
-                        )
-                    with col4:
-                        if st.button(f"💾", key=f"save_{p[0]}", help="Guardar cambios"):
-                            if nuevo_precio != p[3] or nuevo_stock != p[4]:
-                                actualizar_producto(p[0], nuevo_precio, nuevo_stock)
-                                st.success(f"✅ {p[2]} actualizado")
-                                st.cache_data.clear()
-                                time.sleep(0.5)
-                                st.rerun()
-                    with col5:
-                        if st.button(f"🗑️", key=f"del_{p[0]}", help="Eliminar producto"):
-                            eliminar_producto(p[0])
-                            st.success(f"❌ {p[2]} eliminado")
+                col1, col2, col3, col4, col5 = st.columns([2, 1.2, 1.2, 0.6, 0.6])
+                with col1:
+                    st.markdown(f"**{p[2]}**")
+                with col2:
+                    nuevo_precio = st.number_input(
+                        "Precio", 
+                        value=float(p[3]), 
+                        step=100.0, 
+                        format="%.0f",
+                        key=f"precio_{p[0]}",
+                        label_visibility="collapsed",
+                        help="Precio por kilogramo"
+                    )
+                with col3:
+                    nuevo_stock = st.number_input(
+                        "Stock", 
+                        value=float(p[4]), 
+                        step=5.0, 
+                        format="%.1f",
+                        key=f"stock_{p[0]}",
+                        label_visibility="collapsed",
+                        help="Cantidad disponible en kilogramos"
+                    )
+                with col4:
+                    if st.button(f"💾", key=f"save_{p[0]}", help="Guardar cambios"):
+                        if nuevo_precio != p[3] or nuevo_stock != p[4]:
+                            actualizar_producto(p[0], nuevo_precio, nuevo_stock)
+                            st.success(f"✅ {p[2]} actualizado")
                             st.cache_data.clear()
                             time.sleep(0.5)
                             st.rerun()
-                    st.markdown("---")
+                with col5:
+                    if st.button(f"🗑️", key=f"del_{p[0]}", help="Eliminar producto"):
+                        eliminar_producto(p[0])
+                        st.success(f"❌ {p[2]} eliminado")
+                        st.cache_data.clear()
+                        time.sleep(0.5)
+                        st.rerun()
+                st.markdown("---")
             
+            # Mostrar productos con stock bajo
             stock_bajo = [p for p in productos if p[4] < 10]
             if stock_bajo:
                 st.warning("⚠️ **Productos con stock bajo (< 10 kg):**")
                 for p in stock_bajo:
-                    st.write(f"- {p[2]}: {p[4]:.1f} kg")
+                    st.write(f"- **{p[2]}**: {p[4]:.1f} kg disponibles")
         else:
-            st.info("📭 No hay productos cargados. Ve a la pestaña 'Agregar Producto' para comenzar.")
-    
-    # ----- TAB 2: AGREGAR NUEVO PRODUCTO -----
+            st.info("📭 No hay productos cargados. Ve a la pestaña 'Agregar Producto' para comenzar.")    
+  
+     # ----- TAB 2: AGREGAR NUEVO PRODUCTO -----
     with tab2:
         st.header("➕ Agregar Nuevo Producto")
         
         with st.form("nuevo_producto_form"):
             col1, col2 = st.columns(2)
             with col1:
-                nombre_producto = st.text_input("🍎 Nombre del producto", placeholder="Ej: 🍌 Plátanos, 🥑 Paltas, 🍊 Naranjas")
+                nombre_producto = st.text_input(
+                    "🍎 **Nombre del producto**", 
+                    placeholder="Ej: 🍌 Plátanos, 🥑 Paltas, 🍊 Naranjas",
+                    help="Ejemplo: Manzanas, Tomates, Papas"
+                )
             with col2:
-                precio_producto = st.number_input("💰 Precio por kilo ($)", min_value=100, step=100, format="%.0f", value=1000)
+                precio_producto = st.number_input(
+                    "💰 **Precio por kilo ($)**", 
+                    min_value=100, 
+                    step=100, 
+                    format="%.0f", 
+                    value=1000,
+                    help="Precio de venta por kilogramo"
+                )
             
-            stock_inicial = st.number_input("📦 Stock inicial (kg)", min_value=0.0, step=5.0, format="%.1f", value=10.0)
-            email_feriante = st.text_input("📧 Email del feriante", value="prueba@ejemplo.com")
+            stock_inicial = st.number_input(
+                "📦 **Stock inicial (kg)**", 
+                min_value=0.0, 
+                step=5.0, 
+                format="%.1f", 
+                value=10.0,
+                help="Cantidad inicial disponible en kilogramos"
+            )
+            email_feriante = st.text_input("📧 **Email del feriante**", value="prueba@ejemplo.com")
             
             submitted = st.form_submit_button("➕ Agregar Producto", use_container_width=True)
             
@@ -613,8 +650,7 @@ if st.session_state.rol == "feriante":
                     st.rerun()
                 else:
                     st.error("❌ El nombre del producto es obligatorio")
-    
-    # ----- TAB 3: VENTA (carrito) -----
+     # ----- TAB 3: VENTA (carrito) -----
     with tab3:
         st.header("🛒 Carrito de Compras")
         productos = get_productos()
