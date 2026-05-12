@@ -10,75 +10,129 @@ import hashlib
 # ============================================
 st.set_page_config(page_title="Frutería San Sebastián", page_icon="🛒", layout="wide")
 
-# CSS personalizado
+# CSS personalizado (optimizado para Chrome en iPhone)
 st.markdown("""
 <style>
+    /* Eliminar transparencias y forzar fondo sólido */
     .stApp {
-        background: linear-gradient(135deg, #f5f7fa 0%, #e8f5e9 100%);
+        background: #f0f2f6 !important;
+        background-color: #f0f2f6 !important;
     }
     
+    /* Forzar fondo blanco en todas las tarjetas */
+    .stMarkdown, div[data-testid="stVerticalBlock"] > div {
+        background: transparent;
+    }
+    
+    /* Botones con colores sólidos */
     .stButton > button {
-        background-color: #4CAF50 !important;
-        color: white !important;
+        background-color: #2E7D32 !important;
+        color: #FFFFFF !important;
         border-radius: 8px !important;
         border: none !important;
         font-weight: bold !important;
-        transition: all 0.3s ease !important;
+        padding: 10px 16px !important;
+        opacity: 1 !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
     }
     .stButton > button:hover {
-        background-color: #45a049 !important;
-        transform: scale(1.02) !important;
-        box-shadow: 0 4px 12px rgba(76,175,80,0.3) !important;
+        background-color: #1B5E20 !important;
+        opacity: 1 !important;
     }
     
+    /* Títulos sólidos */
     .business-title {
-        background: linear-gradient(135deg, #2E7D32, #4CAF50);
-        padding: 1rem;
-        border-radius: 15px;
-        color: white;
-        text-align: center;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        background: linear-gradient(135deg, #1B5E20, #2E7D32) !important;
+        padding: 1rem !important;
+        border-radius: 15px !important;
+        color: #FFFFFF !important;
+        text-align: center !important;
+        margin-bottom: 1.5rem !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        opacity: 1 !important;
     }
     
-    .cart-header {
-        background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
-        border-radius: 12px;
-        padding: 1rem;
-        margin: 1rem 0;
-        border: 1px solid #a5d6a7;
-    }
-    
+    /* Total a cobrar - fondo sólido */
     .total-a-cobrar {
-        background: linear-gradient(135deg, #2E7D32, #4CAF50);
-        color: white;
-        padding: 1rem;
-        border-radius: 12px;
-        text-align: center;
-        margin: 1rem 0;
+        background: #2E7D32 !important;
+        color: #FFFFFF !important;
+        padding: 1rem !important;
+        border-radius: 12px !important;
+        text-align: center !important;
+        margin: 1rem 0 !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
     }
     
-    .total-a-cobrar h2 {
-        margin: 0;
-        font-size: 2rem;
-    }
-    
+    /* Vuelto */
     .vuelto-success {
-        background-color: #4CAF50;
-        color: white;
-        padding: 0.8rem;
-        border-radius: 8px;
-        text-align: center;
-        font-weight: bold;
-        font-size: 1.2rem;
+        background-color: #2E7D32 !important;
+        color: #FFFFFF !important;
+        padding: 0.8rem !important;
+        border-radius: 8px !important;
+        text-align: center !important;
+        font-weight: bold !important;
+        font-size: 1.2rem !important;
     }
     
-    .merma-card {
-        background-color: #FFF3E0;
-        border-radius: 10px;
-        padding: 0.8rem;
-        margin: 0.5rem 0;
-        border-left: 4px solid #FF9800;
+    /* Carrito card */
+    .cart-header {
+        background: #E8F5E9 !important;
+        border-radius: 12px !important;
+        padding: 1rem !important;
+        margin: 1rem 0 !important;
+        border: 1px solid #A5D6A7 !important;
+    }
+    
+    /* Aumentar contraste de textos */
+    h1, h2, h3, h4, p, span, div, label {
+        color: #1A1A1A !important;
+    }
+    
+    /* Inputs con fondo blanco sólido */
+    input, textarea, .stTextInput input, .stNumberInput input {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        border: 1px solid #CCCCCC !important;
+        border-radius: 8px !important;
+        padding: 8px 12px !important;
+    }
+    
+    /* Selectbox */
+    .stSelectbox div[data-baseweb="select"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #CCCCCC !important;
+    }
+    
+    /* Dataframe (tablas) */
+    .stDataFrame {
+        background-color: #FFFFFF !important;
+    }
+    
+    /* Mensajes de éxito, error, info */
+    .stAlert {
+        background-color: #FFFFFF !important;
+        border-left: 4px solid #2E7D32 !important;
+    }
+    
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #FFFFFF !important;
+        border-right: 1px solid #E0E0E0 !important;
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px !important;
+        background: transparent !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #F5F5F5 !important;
+        border-radius: 8px !important;
+        padding: 8px 16px !important;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #2E7D32 !important;
+        color: #FFFFFF !important;
     }
 </style>
 """, unsafe_allow_html=True)
