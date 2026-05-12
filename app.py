@@ -445,12 +445,16 @@ with st.sidebar:
             st.rerun()
     
     else:
+        # --- SECCIÓN PARA USUARIOS NO AUTENTICADOS ---
         st.info("👤 **Acceso para Ayudantes**")
         
+        # Formulario para ayudante
         with st.form("login_ayudante_form"):
             nombre_ayudante = st.selectbox("Selecciona tu nombre", list(st.session_state.ayudantes.keys()))
             clave_ayudante = st.text_input("Contraseña", type="password")
-            if st.form_submit_button("🔐 Ingresar", use_container_width=True):
+            submitted_ayudante = st.form_submit_button("🔐 Ingresar", use_container_width=True)
+            
+            if submitted_ayudante:
                 if autenticar_ayudante(nombre_ayudante, clave_ayudante):
                     st.success(f"✅ Bienvenido {nombre_ayudante}")
                     st.rerun()
@@ -459,7 +463,24 @@ with st.sidebar:
         
         st.markdown("---")
         st.subheader("🔐 Acceso Feriante")
-        st.text_input("Contraseña de dueño", type="password", key="clave_feriante", on_change=autenticar_feriante)
+        
+        # Formulario para feriante (con botón)
+        with st.form("login_feriante_form"):
+            clave_feriante_input = st.text_input("Contraseña de dueño", type="password", key="clave_feriante_input")
+            submitted_feriante = st.form_submit_button("🔐 Ingresar como Feriante", use_container_width=True)
+            
+            if submitted_feriante:
+                if clave_feriante_input == "feriante2026":
+                    st.session_state.autenticado = True
+                    st.session_state.rol = "feriante"
+                    st.session_state.usuario = "Feriante (Dueño)"
+                    st.session_state.ayudante_autenticado = False
+                    st.session_state.ayudante_actual = None
+                    st.success("✅ Acceso concedido como Feriante")
+                    st.rerun()
+                else:
+                    st.error("❌ Contraseña incorrecta")
+        
         st.caption("Contraseña: `feriante2026`")
 
 st.markdown("---")
