@@ -536,6 +536,7 @@ if st.session_state.rol == "feriante":
         # ----- TAB 1: VER INVENTARIO Y EDITAR -----
     # ----- TAB 2: AGREGAR NUEVO PRODUCTO -----
     # ----- TAB 1: VER INVENTARIO Y EDITAR -----
+    # ----- TAB 1: VER INVENTARIO Y EDITAR -----
     with tab1:
         st.header("📦 Inventario Actual")
         productos = get_productos()
@@ -558,13 +559,17 @@ if st.session_state.rol == "feriante":
             st.markdown("---")
             
             for p in productos:
+                # Asegurar que los valores sean float
+                precio_actual = float(p[3])
+                stock_actual = float(p[4])
+                
                 col1, col2, col3, col4, col5 = st.columns([2, 1.2, 1.2, 0.6, 0.6])
                 with col1:
                     st.markdown(f"**{p[2]}**")
                 with col2:
                     nuevo_precio = st.number_input(
                         "Precio", 
-                        value=float(p[3]), 
+                        value=precio_actual,  # ← AHORA ES FLOAT
                         step=100.0, 
                         format="%.0f",
                         key=f"precio_{p[0]}",
@@ -574,7 +579,7 @@ if st.session_state.rol == "feriante":
                 with col3:
                     nuevo_stock = st.number_input(
                         "Stock", 
-                        value=float(p[4]), 
+                        value=stock_actual,  # ← AHORA ES FLOAT
                         step=5.0, 
                         format="%.1f",
                         key=f"stock_{p[0]}",
@@ -583,7 +588,7 @@ if st.session_state.rol == "feriante":
                     )
                 with col4:
                     if st.button(f"💾", key=f"save_{p[0]}", help="Guardar cambios"):
-                        if nuevo_precio != p[3] or nuevo_stock != p[4]:
+                        if nuevo_precio != precio_actual or nuevo_stock != stock_actual:
                             actualizar_producto(p[0], nuevo_precio, nuevo_stock)
                             st.success(f"✅ {p[2]} actualizado")
                             st.cache_data.clear()
@@ -599,14 +604,15 @@ if st.session_state.rol == "feriante":
                 st.markdown("---")
             
             # Mostrar productos con stock bajo
-            stock_bajo = [p for p in productos if p[4] < 10]
+            stock_bajo = [p for p in productos if float(p[4]) < 10]
             if stock_bajo:
                 st.warning("⚠️ **Productos con stock bajo (< 10 kg):**")
                 for p in stock_bajo:
-                    st.write(f"- **{p[2]}**: {p[4]:.1f} kg disponibles")
+                    st.write(f"- **{p[2]}**: {float(p[4]):.1f} kg disponibles")
         else:
-            st.info("📭 No hay productos cargados. Ve a la pestaña 'Agregar Producto' para comenzar.")    
-  
+            st.info("📭 No hay productos cargados. Ve a la pestaña 'Agregar Producto' para comenzar.")
+
+
      # ----- TAB 2: AGREGAR NUEVO PRODUCTO -----
     with tab2:
         st.header("➕ Agregar Nuevo Producto")
