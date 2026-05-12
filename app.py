@@ -614,6 +614,8 @@ if st.session_state.rol == "feriante":
 
 
     # ----- TAB 2: AGREGAR NUEVO PRODUCTO -----
+
+    # ----- TAB 2: AGREGAR NUEVO PRODUCTO -----
     with tab2:
         st.header("➕ Agregar Nuevo Producto")
         
@@ -622,18 +624,32 @@ if st.session_state.rol == "feriante":
             with col1:
                 nombre_producto = st.text_input(
                     "🍎 **Nombre del producto**", 
-                    placeholder="Ej: 🍌 Plátanos, 🥑 Paltas, 🍊 Naranjas",
+                    placeholder="Ej: Plátanos, Paltas, Naranjas",
                     help="Ejemplo: Manzanas, Tomates, Papas"
                 )
             with col2:
-                precio_producto = st.number_input(
+                precio_texto = st.text_input(
                     "💰 **Precio por kilo ($)**", 
-                    min_value=100.0,      # ← CAMBIADO A FLOAT
-                    step=100.0,           # ← CAMBIADO A FLOAT
-                    format="%.0f", 
-                    value=1000.0,         # ← CAMBIADO A FLOAT
-                    help="Precio de venta por kilogramo (ej: 1200 = $1.200)"
+                    placeholder="Ej: 1200  o  1.200  o  1,200",
+                    help="Escribe : 1200, 1.200 o 1,200 ",
+                    value="1000"
                 )
+                
+                # Función para formatear y mostrar el precio ingresado
+                def mostrar_precio_formateado(texto):
+                    try:
+                        # Limpiar caracteres no numéricos (excepto el punto y coma que usamos para separar miles)
+                        limpio = texto.replace(".", "").replace(",", "").strip()
+                        if limpio.isdigit():
+                            valor = int(limpio)
+                            # Formato chileno: 1.200
+                            return f"💰 Convertido a: ${valor:,.0f}".replace(",", ".")
+                    except:
+                        pass
+                    return "⚠️ Formato inválido"
+                
+                if precio_texto:
+                    st.caption(mostrar_precio_formateado(precio_texto))
             
             stock_inicial = st.number_input(
                 "📦 **Stock inicial (kg)**", 
@@ -641,21 +657,40 @@ if st.session_state.rol == "feriante":
                 step=5.0, 
                 format="%.1f", 
                 value=10.0,
-                help="Cantidad inicial disponible en kilogramos (ej: 10.5 = 10,5 kg)"
+                help="Cantidad inicial en kilos (ej: 10.5 = 10,5 kg)"
             )
             email_feriante = st.text_input("📧 **Email del feriante**", value="prueba@ejemplo.com")
             
             submitted = st.form_submit_button("➕ Agregar Producto", use_container_width=True)
             
             if submitted:
-                if nombre_producto:
+                errores = []
+                
+                if not nombre_producto:
+                    errores.append("El nombre del producto es obligatorio")
+                
+                # Procesar precio
+                try:
+                    precio_limpio = precio_texto.replace(".", "").replace(",", "").strip()
+                    if not precio_limpio.isdigit():
+                        errores.append("El precio debe ser un número (ej: 1200, 1.200 o 1,200)")
+                    else:
+                        precio_producto = float(precio_limpio)
+                        if precio_producto < 100:
+                            errores.append(f"El precio debe ser mayor o igual a 100. Ingresaste: {precio_producto:,.0f}".replace(",", "."))
+                except:
+                    errores.append("El precio no es válido")
+                
+                if errores:
+                    for error in errores:
+                        st.error(f"❌ {error}")
+                else:
                     agregar_producto(email_feriante, nombre_producto, precio_producto, stock_inicial)
                     st.success(f"✅ Producto '{nombre_producto}' agregado correctamente")
+                    st.info(f"💰 Precio guardado: ${precio_producto:,.0f}".replace(",", "."))
                     st.cache_data.clear()
-                    time.sleep(1)
+                    time.sleep(2)
                     st.rerun()
-                else:
-                    st.error("❌ El nombre del producto es obligatorio")
      # ----- TAB 3: VENTA (carrito) -----
     with tab3:
         st.header("🛒 Carrito de Compras")
