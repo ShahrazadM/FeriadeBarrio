@@ -24,54 +24,61 @@ st.markdown("""
         background: transparent;
     }
     
-    /* Botones con colores sólidos */
-    .stButton > button {
-        background-color: #2E7D32 !important;
-        color: #FFFFFF !important;
-        border-radius: 8px !important;
-        border: none !important;
-        font-weight: bold !important;
-        padding: 10px 16px !important;
-        opacity: 1 !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
-    }
-    .stButton > button:hover {
-        background-color: #1B5E20 !important;
-        opacity: 1 !important;
-    }
-    
-    /* Títulos sólidos */
+    /* Título del negocio - Gradiente original */
     .business-title {
-        background: linear-gradient(135deg, #1B5E20, #2E7D32) !important;
+        background: linear-gradient(135deg, #2E7D32, #4CAF50) !important;
         padding: 1rem !important;
         border-radius: 15px !important;
-        color: #FFFFFF !important;
+        color: white !important;
         text-align: center !important;
         margin-bottom: 1.5rem !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-        opacity: 1 !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
     }
-    
-    /* Total a cobrar - fondo sólido */
+
+    /* Total a cobrar - Gradiente original */
     .total-a-cobrar {
-        background: #2E7D32 !important;
-        color: #FFFFFF !important;
+        background: linear-gradient(135deg, #2E7D32, #4CAF50) !important;
+        color: white !important;
         padding: 1rem !important;
         border-radius: 12px !important;
         text-align: center !important;
         margin: 1rem 0 !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
     }
-    
-    /* Vuelto */
+
+    /* Vuelto - Verde claro original */
     .vuelto-success {
-        background-color: #2E7D32 !important;
-        color: #FFFFFF !important;
+        background-color: #4CAF50 !important;
+        color: white !important;
         padding: 0.8rem !important;
         border-radius: 8px !important;
         text-align: center !important;
         font-weight: bold !important;
         font-size: 1.2rem !important;
+    }
+
+    /* Botones normales - Verde claro original */
+    .stButton > button {
+        background-color: #4CAF50 !important;
+        color: white !important;
+        border-radius: 8px !important;
+        border: none !important;
+        font-weight: bold !important;
+        transition: all 0.3s ease !important;
+    }
+    .stButton > button:hover {
+        background-color: #45a049 !important;
+        transform: scale(1.02) !important;
+        box-shadow: 0 4px 12px rgba(76,175,80,0.3) !important;
+    }
+
+    /* Botón Confirmar Pago - Celeste claro (SOLO ESTE) */
+    button:has(> div:contains("CONFIRMAR PAGO")),
+    button:contains("CONFIRMAR PAGO") {
+        background-color: #03A9F4 !important;
+    }
+    button:has(> div:contains("CONFIRMAR PAGO")):hover,
+    button:contains("CONFIRMAR PAGO"):hover {
+        background-color: #0288D1 !important;
     }
     
     /* Carrito card */
