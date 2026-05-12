@@ -10,32 +10,43 @@ import hashlib
 # ============================================
 st.set_page_config(page_title="Frutería San Sebastián", page_icon="🛒", layout="wide")
 
-# CSS personalizado (optimizado para Chrome en iPhone)
+# CSS personalizado - Versión mejorada para iPhone
 st.markdown("""
 <style>
-    /* Eliminar transparencias y forzar fondo sólido */
+    /* === FONDO GENERAL === */
     .stApp {
         background: #f0f2f6 !important;
         background-color: #f0f2f6 !important;
     }
     
-    /* Forzar fondo blanco en todas las tarjetas */
+    /* === TARJETAS Y CONTENEDORES === */
     .stMarkdown, div[data-testid="stVerticalBlock"] > div {
         background: transparent;
     }
     
-    /* Título del negocio - Gradiente original */
+    /* === TÍTULO DEL NEGOCIO === */
     .business-title {
         background: linear-gradient(135deg, #2E7D32, #4CAF50) !important;
-        padding: 1rem !important;
-        border-radius: 15px !important;
+        padding: 1.2rem !important;
+        border-radius: 20px !important;
         color: white !important;
         text-align: center !important;
         margin-bottom: 1.5rem !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
     }
-
-    /* Total a cobrar - Gradiente original */
+    
+    .business-title h1 {
+        font-size: 1.8rem !important;
+        margin: 0 !important;
+    }
+    
+    .business-title p {
+        font-size: 0.9rem !important;
+        margin-top: 0.3rem !important;
+        opacity: 0.9 !important;
+    }
+    
+    /* === TOTAL A COBRAR === */
     .total-a-cobrar {
         background: linear-gradient(135deg, #2E7D32, #4CAF50) !important;
         color: white !important;
@@ -44,8 +55,8 @@ st.markdown("""
         text-align: center !important;
         margin: 1rem 0 !important;
     }
-
-    /* Vuelto - Verde claro original */
+    
+    /* === VUELTO === */
     .vuelto-success {
         background-color: #4CAF50 !important;
         color: white !important;
@@ -55,23 +66,25 @@ st.markdown("""
         font-weight: bold !important;
         font-size: 1.2rem !important;
     }
-
-    /* Botones normales - Verde claro original */
+    
+    /* === BOTONES NORMALES (VERDE) === */
     .stButton > button {
         background-color: #4CAF50 !important;
         color: white !important;
-        border-radius: 8px !important;
+        border-radius: 10px !important;
         border: none !important;
         font-weight: bold !important;
+        font-size: 1rem !important;
+        padding: 0.6rem 1rem !important;
         transition: all 0.3s ease !important;
+        width: 100% !important;
     }
     .stButton > button:hover {
         background-color: #45a049 !important;
         transform: scale(1.02) !important;
-        box-shadow: 0 4px 12px rgba(76,175,80,0.3) !important;
     }
-
-    /* Botón Confirmar Pago - Celeste claro (SOLO ESTE) */
+    
+    /* === BOTÓN CONFIRMAR PAGO (CELESTE) === */
     button:has(> div:contains("CONFIRMAR PAGO")),
     button:contains("CONFIRMAR PAGO") {
         background-color: #03A9F4 !important;
@@ -81,7 +94,7 @@ st.markdown("""
         background-color: #0288D1 !important;
     }
     
-    /* Carrito card */
+    /* === CARRITO CARD === */
     .cart-header {
         background: #E8F5E9 !important;
         border-radius: 12px !important;
@@ -90,60 +103,138 @@ st.markdown("""
         border: 1px solid #A5D6A7 !important;
     }
     
-    /* Aumentar contraste de textos */
+    /* === TEXTOS EN GENERAL === */
     h1, h2, h3, h4, p, span, div, label {
         color: #1A1A1A !important;
     }
     
-    /* Inputs con fondo blanco sólido */
+    /* === INPUTS === */
     input, textarea, .stTextInput input, .stNumberInput input {
         background-color: #FFFFFF !important;
         color: #000000 !important;
         border: 1px solid #CCCCCC !important;
-        border-radius: 8px !important;
-        padding: 8px 12px !important;
+        border-radius: 10px !important;
+        padding: 10px 12px !important;
+        font-size: 1rem !important;
     }
     
-    /* Selectbox */
+    /* === SELECTBOX (DESPLEGABLE) === */
     .stSelectbox div[data-baseweb="select"] {
         background-color: #FFFFFF !important;
         border: 1px solid #CCCCCC !important;
+        border-radius: 10px !important;
+        min-height: 45px !important;
     }
     
-    /* Dataframe (tablas) */
-    .stDataFrame {
+    .stSelectbox div[data-baseweb="select"] > div {
         background-color: #FFFFFF !important;
+        color: #000000 !important;
+        font-size: 1rem !important;
     }
     
-    /* Mensajes de éxito, error, info */
-    .stAlert {
+    /* === DROPDOWN (MENÚ FLOTANTE) === */
+    div[role="listbox"] div {
         background-color: #FFFFFF !important;
-        border-left: 4px solid #2E7D32 !important;
+        color: #000000 !important;
+        padding: 8px 12px !important;
+        font-size: 1rem !important;
     }
     
-    /* Sidebar */
+    div[data-baseweb="popover"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #DDDDDD !important;
+        border-radius: 10px !important;
+        box-shadow: 0px 4px 12px rgba(0,0,0,0.15) !important;
+    }
+    
+    div[data-baseweb="popover"] div {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+    }
+    
+    /* === SIDEBAR (BARRA LATERAL) === */
     [data-testid="stSidebar"] {
         background-color: #FFFFFF !important;
         border-right: 1px solid #E0E0E0 !important;
     }
     
-    /* Tabs */
+    [data-testid="stSidebar"] * {
+        color: #1A1A1A !important;
+    }
+    
+    [data-testid="stSidebar"] .stButton > button {
+        background-color: #4CAF50 !important;
+    }
+    
+    /* === BARRA SUPERIOR (GITHUB/STREAMLIT) === */
+    .stApp > header {
+        background-color: #FFFFFF !important;
+        border-bottom: 1px solid #E0E0E0 !important;
+    }
+    
+    .stApp > header * {
+        color: #1A1A1A !important;
+    }
+    
+    /* === DATAFRAME (TABLAS) === */
+    .stDataFrame {
+        background-color: #FFFFFF !important;
+        border-radius: 8px !important;
+    }
+    
+    /* === ALERTAS === */
+    .stAlert {
+        background-color: #FFFFFF !important;
+        border-left: 4px solid #2E7D32 !important;
+        border-radius: 8px !important;
+    }
+    
+    /* === TABS === */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px !important;
         background: transparent !important;
+        flex-wrap: wrap !important;
     }
     .stTabs [data-baseweb="tab"] {
         background-color: #F5F5F5 !important;
-        border-radius: 8px !important;
+        border-radius: 10px !important;
         padding: 8px 16px !important;
+        font-weight: 500 !important;
     }
     .stTabs [aria-selected="true"] {
         background-color: #2E7D32 !important;
         color: #FFFFFF !important;
     }
+    
+    /* === MEJORAS PARA MÓVIL === */
+    @media (max-width: 768px) {
+        .stButton > button {
+            font-size: 0.9rem !important;
+            padding: 0.5rem 0.8rem !important;
+        }
+        
+        .business-title h1 {
+            font-size: 1.4rem !important;
+        }
+        
+        .stTabs [data-baseweb="tab"] {
+            padding: 6px 12px !important;
+            font-size: 0.8rem !important;
+        }
+        
+        input, .stSelectbox div[data-baseweb="select"] {
+            font-size: 0.9rem !important;
+        }
+    }
+    
+    /* === INFO Y WARNING === */
+    .stInfo, .stWarning, .stError, .stSuccess {
+        background-color: #FFFFFF !important;
+        border-radius: 10px !important;
+        padding: 0.5rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
-
 # ============================================
 # HASH PARA CONTRASEÑAS
 # ============================================
