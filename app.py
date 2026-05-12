@@ -613,7 +613,7 @@ if st.session_state.rol == "feriante":
             st.info("📭 No hay productos cargados. Ve a la pestaña 'Agregar Producto' para comenzar.")
 
 
-     # ----- TAB 2: AGREGAR NUEVO PRODUCTO -----
+    # ----- TAB 2: AGREGAR NUEVO PRODUCTO -----
     with tab2:
         st.header("➕ Agregar Nuevo Producto")
         
@@ -628,11 +628,11 @@ if st.session_state.rol == "feriante":
             with col2:
                 precio_producto = st.number_input(
                     "💰 **Precio por kilo ($)**", 
-                    min_value=100, 
-                    step=100, 
+                    min_value=100.0,      # ← CAMBIADO A FLOAT
+                    step=100.0,           # ← CAMBIADO A FLOAT
                     format="%.0f", 
-                    value=1000,
-                    help="Precio de venta por kilogramo"
+                    value=1000.0,         # ← CAMBIADO A FLOAT
+                    help="Precio de venta por kilogramo (ej: 1200 = $1.200)"
                 )
             
             stock_inicial = st.number_input(
@@ -641,7 +641,7 @@ if st.session_state.rol == "feriante":
                 step=5.0, 
                 format="%.1f", 
                 value=10.0,
-                help="Cantidad inicial disponible en kilogramos"
+                help="Cantidad inicial disponible en kilogramos (ej: 10.5 = 10,5 kg)"
             )
             email_feriante = st.text_input("📧 **Email del feriante**", value="prueba@ejemplo.com")
             
