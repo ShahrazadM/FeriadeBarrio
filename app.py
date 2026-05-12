@@ -10,7 +10,7 @@ import hashlib
 # ============================================
 st.set_page_config(page_title="Frutería San Sebastián", page_icon="🛒", layout="wide")
 
-# CSS personalizado - Versión mejorada para iPhone
+# CSS personalizado - Versión completa y corregida para iPhone
 st.markdown("""
 <style>
     /* === FONDO GENERAL === */
@@ -108,7 +108,7 @@ st.markdown("""
         color: #1A1A1A !important;
     }
     
-    /* === INPUTS === */
+    /* === INPUTS GENERALES === */
     input, textarea, .stTextInput input, .stNumberInput input {
         background-color: #FFFFFF !important;
         color: #000000 !important;
@@ -118,38 +118,95 @@ st.markdown("""
         font-size: 1rem !important;
     }
     
-    /* === SELECTBOX (DESPLEGABLE) === */
+    /* === CAMPO CONTRASEÑA - FONDO BLANCO OBLIGATORIO === */
+    .stTextInput input[type="password"] {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        border: 2px solid #CCCCCC !important;
+        border-radius: 12px !important;
+        padding: 12px 14px !important;
+        font-size: 1rem !important;
+        min-height: 50px !important;
+        -webkit-text-fill-color: #000000 !important;
+        opacity: 1 !important;
+    }
+    
+    .stTextInput input[type="password"]:focus {
+        border-color: #2E7D32 !important;
+        outline: none !important;
+        background-color: #FFFFFF !important;
+    }
+    
+    /* Forzar fondo blanco en autocompletado de iPhone */
+    .stTextInput input:-webkit-autofill,
+    .stTextInput input[type="password"]:-webkit-autofill {
+        background-color: #FFFFFF !important;
+        -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+        box-shadow: 0 0 0px 1000px white inset !important;
+        -webkit-text-fill-color: #000000 !important;
+    }
+    
+    /* === SELECTBOX (DESPLEGABLE) - FONDO BLANCO FORZADO === */
     .stSelectbox div[data-baseweb="select"] {
         background-color: #FFFFFF !important;
-        border: 1px solid #CCCCCC !important;
-        border-radius: 10px !important;
-        min-height: 45px !important;
+        border: 2px solid #2E7D32 !important;
+        border-radius: 12px !important;
+        min-height: 52px !important;
     }
     
     .stSelectbox div[data-baseweb="select"] > div {
         background-color: #FFFFFF !important;
         color: #000000 !important;
         font-size: 1rem !important;
+        font-weight: 500 !important;
     }
     
-    /* === DROPDOWN (MENÚ FLOTANTE) === */
+    /* === DROPDOWN (MENÚ FLOTANTE) - FONDO BLANCO === */
+    div[role="listbox"] {
+        background-color: #FFFFFF !important;
+    }
+    
     div[role="listbox"] div {
         background-color: #FFFFFF !important;
         color: #000000 !important;
-        padding: 8px 12px !important;
+        padding: 10px 14px !important;
         font-size: 1rem !important;
     }
     
     div[data-baseweb="popover"] {
         background-color: #FFFFFF !important;
-        border: 1px solid #DDDDDD !important;
-        border-radius: 10px !important;
+        border: 1px solid #CCCCCC !important;
+        border-radius: 12px !important;
         box-shadow: 0px 4px 12px rgba(0,0,0,0.15) !important;
     }
     
     div[data-baseweb="popover"] div {
         background-color: #FFFFFF !important;
         color: #000000 !important;
+    }
+    
+    /* === BOTÓN INGRESAR - VERDE OSCURO === */
+    .stButton button:contains("Ingresar") {
+        background-color: #2E7D32 !important;
+        color: white !important;
+        font-weight: bold !important;
+        padding: 12px !important;
+        border-radius: 12px !important;
+        border: none !important;
+        font-size: 1rem !important;
+        margin-top: 8px !important;
+    }
+    
+    .stButton button:contains("Ingresar"):hover {
+        background-color: #1B5E20 !important;
+    }
+    
+    /* === ETIQUETAS === */
+    .stTextInput label, .stSelectbox label {
+        font-size: 0.9rem !important;
+        font-weight: 600 !important;
+        color: #1A1A1A !important;
+        margin-bottom: 4px !important;
     }
     
     /* === SIDEBAR (BARRA LATERAL) === */
@@ -224,6 +281,14 @@ st.markdown("""
         
         input, .stSelectbox div[data-baseweb="select"] {
             font-size: 0.9rem !important;
+        }
+        
+        .stSelectbox div[data-baseweb="select"] {
+            min-height: 48px !important;
+        }
+        
+        .stTextInput input[type="password"] {
+            min-height: 48px !important;
         }
     }
     
