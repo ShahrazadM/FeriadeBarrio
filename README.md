@@ -24,6 +24,62 @@ Este es un **demo funcional** del proyecto de arquitectura de sistemas informát
   "Maria":maria2026
   "Jose":jose2026
 
+---
+
+## 🚀 **Despliegue en Neon (PostgreSQL) - Paso a Paso**
+
+### 📋 **Paso 1: Instalar Streamlit en Visual Studio Code**
+
+```bash
+# Abre terminal en VS Code (Ctrl+ñ)
+pip install streamlit
+```
+
+### 📋 **Paso 2: Crear archivos del proyecto**
+
+| Archivo | ¿Subir a GitHub? |
+|---------|------------------|
+| `app.py` | ✅ Sí |
+| `requirements.txt` | ✅ Sí |
+| `db_config.py` | ✅ Sí |
+| `.env` | ❌ **NO** |
+
+### ✅ **Paso 3: Verificación local**
+
+```bash
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Ejecutar app
+streamlit run app.py
+```
+
+> La app debe funcionar en `localhost` antes de continuar.
+
+### ☁️ **Paso 4: Despliegue en Streamlit Cloud**
+
+1. **Sube a GitHub** (solo `app.py`, `requirements.txt`, `db_config.py`)
+
+2. **Ve a [share.streamlit.io](https://share.streamlit.io)** y conecta tu repositorio
+
+3. **Configura Secrets** (Advanced settings → Secrets):
+
+```toml
+DATABASE_URL = "postgresql://usuario:contraseña@host.neon.tech/dbname"
+```
+
+4. **Click en Deploy** 🚀
+
+### ⚠️ **Importante**
+
+| Requisito | Neon |
+|-----------|------|
+| Whitelist IP | ✅ Necesitas agregar IPs de Streamlit |
+| `.env` a GitHub | ❌ No subir |
+| Secrets configurados | ✅ Obligatorio |
+
+
+
 ## 📊 Comparativa Técnica: Neon vs Supabase
 
 | Aspecto | 🔷 Neon | 🔶 Supabase |
