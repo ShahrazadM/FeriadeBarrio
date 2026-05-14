@@ -23,5 +23,18 @@ Este es un **demo funcional** del proyecto de arquitectura de sistemas informát
 - "Pedro":pedro2026
   "Maria":maria2026
   "Jose":jose2026
+
+## 📊 Comparativa Técnica: Neon vs Supabase
+
+| Aspecto | 🔷 Neon | 🔶 Supabase |
+|---------|---------|-------------|
+| **Biblioteca Python** | `psycopg2-binary` | `supabase` |
+| **Cadena de conexión** | `postgresql://user:pass@host/db` | URL + anon key |
+| **Trigger** | ✅ En BD (PL/pgSQL) | ✅ En BD (PL/pgSQL) |
+| **Descuento de stock** | ✅ Automático (trigger) | ✅ Automático (trigger) |
+| **Configuración en Cloud** | Requiere whitelist IP | Sin configuración extra |
+| **Dificultad** | Media | Baja |
+
+> **Conclusión:** Ambos funcionan igual. La diferencia está en la facilidad de despliegue.
 #para probar la conexion pegar el enlace en la barra de direcciones
 #del navegador:https://h7e8ujqlyl2rq2muptrwrm.streamlit.app/
