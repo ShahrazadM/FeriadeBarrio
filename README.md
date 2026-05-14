@@ -92,5 +92,11 @@ DATABASE_URL = "postgresql://usuario:contraseña@host.neon.tech/dbname"
 | **Dificultad** | Media | Baja |
 
 > **Conclusión:** Ambos funcionan igual. La diferencia está en la facilidad de despliegue.
+> ## ⚠️ **Neon: Se suspende a los 5 minutos sin uso**
+- ⏱️ Si no hay consultas en **5 minutos**, la BD se duerme
+- 🔄 Al vender de nuevo, tarda **2-5 segundos** en reactivarse
+- 💰 Solo un **plan de pago** desactiva esta pausa automática
+
 #para probar la conexion pegar el enlace en la barra de direcciones
+
 #del navegador:https://h7e8ujqlyl2rq2muptrwrm.streamlit.app/
